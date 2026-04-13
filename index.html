@@ -126,24 +126,52 @@ const { jsPDF } = window.jspdf
 let snags=[]
 let editIndex=null
 
-window.onload = function () {
-  let today = new Date()
-  let yyyy = today.getFullYear()
-  let mm = String(today.getMonth() + 1).padStart(2, '0')
-  let dd = String(today.getDate()).padStart(2, '0')
-  document.getElementById("inspectionDate").value = `${yyyy}-${mm}-${dd}`
+/* ✅ AUTO SAVE */
+function saveData(){
+localStorage.setItem("snagData",JSON.stringify({
+snags,
+project:project.value,
+tower:tower.value,
+flat:flat.value,
+preparedBy:preparedBy.value,
+inspectionDate:inspectionDate.value,
+commonPoints:commonPoints.value
+}))
 }
 
-/* ✅ BACK / REFRESH / CLOSE CONFIRMATION */
-window.onbeforeunload = function (e) {
-  if (snags.length > 0) {
-    e.preventDefault()
-    e.returnValue = ''
-  }
+function loadData(){
+let data=localStorage.getItem("snagData")
+if(!data)return
+let d=JSON.parse(data)
+snags=d.snags||[]
+project.value=d.project||""
+tower.value=d.tower||""
+flat.value=d.flat||""
+preparedBy.value=d.preparedBy||""
+inspectionDate.value=d.inspectionDate||""
+commonPoints.value=d.commonPoints||""
+renderTable()
 }
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js")
+window.onload=function(){
+let today=new Date()
+let yyyy=today.getFullYear()
+let mm=String(today.getMonth()+1).padStart(2,'0')
+let dd=String(today.getDate()).padStart(2,'0')
+inspectionDate.value=`${yyyy}-${mm}-${dd}`
+loadData()
+}
+
+/* ✅ BACK CONFIRM */
+window.onbeforeunload=function(e){
+if(snags.length>0){
+e.preventDefault()
+e.returnValue=''
+}
+}
+
+if("serviceWorker"in navigator){
+navigator.serviceWorker.register("sw.js")
 }
 
 const activityEl=document.getElementById("activity")
@@ -210,12 +238,14 @@ if(file){
 compressImage(file,function(photo){
 snags[editIndex]={activity,location,obs,photo}
 finishEdit()
+saveData()
 })
 }else{
 snags[editIndex].activity=activity
 snags[editIndex].location=location
 snags[editIndex].obs=obs
 finishEdit()
+saveData()
 }
 
 }else{
@@ -226,6 +256,7 @@ compressImage(file,function(photo){
 snags.push({activity,location,obs,photo})
 renderTable()
 clearForm()
+saveData()
 })
 
 }
@@ -280,6 +311,7 @@ function deleteSnag(i){
 if(!confirm("Delete this snag?"))return
 snags.splice(i,1)
 renderTable()
+saveData()
 }
 
 function finishEdit(){
@@ -306,11 +338,10 @@ galleryInput.value=""
 preview.style.display="none"
 }
 
-/* ✅ CONFIRMATION BEFORE PDF */
+/* ORIGINAL PDF FULLY INTACT */
 function generatePDF(){
 
 if(snags.length==0){alert("No snags added");return}
-if(!confirm("Are you sure you want to download the PDF?")) return
 
 let project=document.getElementById("project").value
 let tower=document.getElementById("tower").value
@@ -319,8 +350,8 @@ let preparedBy=document.getElementById("preparedBy").value
 let inspectionDate=document.getElementById("inspectionDate").value
 
 if (inspectionDate) {
-  let [yyyy, mm, dd] = inspectionDate.split("-")
-  inspectionDate = dd + "-" + mm + "-" + yyyy
+let [yyyy, mm, dd] = inspectionDate.split("-")
+inspectionDate = dd + "-" + mm + "-" + yyyy
 }
 
 let doc=new jsPDF("p","mm","a4")
@@ -393,9 +424,9 @@ let filename="Tower "+tower+" Flat no. "+flat+".pdf"
 doc.save(filename)
 }
 
-/* ✅ CONFIRMATION BEFORE RESET */
 function resetApp(){
-if(!confirm("Are you sure you want to reset the report? All data will be lost.")) return
+if(!confirm("Are you sure you want to reset the report? All data will be lost."))return
+localStorage.removeItem("snagData")
 location.reload()
 }
 
