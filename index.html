@@ -35,31 +35,6 @@ img{width:90px;border-radius:6px;cursor:pointer;}
 .actionBtn{padding:6px 8px;margin:2px;border-radius:6px;font-size:12px;}
 .editBtn{background:#1976d2;color:white;}
 .delBtn{background:#c62828;color:white;}
-#photoCanvas{
-width:100%;
-max-height:450px;
-border:1px solid #ccc;
-border-radius:8px;
-touch-action:none;
-background:white;
-}
-
-document.querySelectorAll(".colorBtn").forEach(btn=>{
-
-    btn.onclick=()=>{
-
-        selectedColor=btn.dataset.color
-
-        document.querySelectorAll(".colorBtn").forEach(b=>{
-            b.style.border="1px solid #ccc"
-        })
-
-        btn.style.border="3px solid black"
-
-    }
-
-})
-
 </style>
 
 </head>
@@ -115,34 +90,8 @@ document.querySelectorAll(".colorBtn").forEach(btn=>{
 <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none">
 <input type="file" accept="image/*" id="galleryInput" style="display:none">
 
-<div id="preview" style="display:none">
+<div id="preview"><img id="previewImg"></div>
 
-<div style="display:flex;gap:6px;margin-bottom:8px;">
-<button type="button" id="drawTool">Draw</button>
-<button type="button" id="arrowTool">Arrow</button>
-<button type="button" id="undoTool">Undo</button>
-<button type="button" id="clearTool">Clear</button>
-</div>
-
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-
-<button type="button" class="colorBtn" data-color="red">🔴</button>
-<button type="button" class="colorBtn" data-color="yellow">🟡</button>
-<button type="button" class="colorBtn" data-color="lime">🟢</button>
-<button type="button" class="colorBtn" data-color="blue">🔵</button>
-
-<select id="penSize">
-    <option value="6">Thin</option>
-    <option value="12">Medium</option>
-    <option value="20" selected>Thick</option>
-    <option value="30">Extra Thick</option>
-    <option value="40">Very Thick</option>
-</select>
-</div>
-
-<canvas id="photoCanvas"></canvas>
-
-</div>
 <button id="addBtn" class="primary" onclick="addSnag()" style="margin-top:12px;">Add Snag</button>
 <button id="cancelBtn" class="update" onclick="cancelEdit()" style="display:none;margin-top:6px;">Cancel Edit</button>
 
@@ -177,19 +126,6 @@ const { jsPDF } = window.jspdf
 let snags=[]
 let editIndex=null
 
-let currentImage=null
-
-let drawing=false
-let tool="draw"
-let selectedColor="red"
-
-let startX=0
-let startY=0
-let lastX=0
-let lastY=0
-
-let history=[]
-
 /* ✅ AUTO SAVE */
 function saveData(){
 localStorage.setItem("snagData",JSON.stringify({
@@ -216,15 +152,7 @@ inspectionDate.value=d.inspectionDate||""
 commonPoints.value=d.commonPoints||""
 renderTable()
 }
-window.addEventListener("load",()=>{
 
-    const firstColor=document.querySelector('.colorBtn[data-color="red"]')
-
-    if(firstColor){
-        firstColor.style.border="3px solid black"
-    }
-
-})
 window.onload=function(){
 let today=new Date()
 let yyyy=today.getFullYear()
@@ -250,9 +178,7 @@ const activityEl=document.getElementById("activity")
 const locationEl=document.getElementById("location")
 const obsEl=document.getElementById("obs")
 const preview=document.getElementById("preview")
-
-const canvas=document.getElementById("photoCanvas")
-const ctx=canvas.getContext("2d")
+const previewImg=document.getElementById("previewImg")
 
 const cameraInput=document.getElementById("cameraInput")
 const galleryInput=document.getElementById("galleryInput")
@@ -263,173 +189,6 @@ const locationOther=document.getElementById("locationOther")
 const addBtn=document.getElementById("addBtn")
 const cancelBtn=document.getElementById("cancelBtn")
 
-const drawTool=document.getElementById("drawTool")
-const arrowTool=document.getElementById("arrowTool")
-const undoTool=document.getElementById("undoTool")
-const clearTool=document.getElementById("clearTool")
-const penSize=document.getElementById("penSize")
-
-document.querySelectorAll(".colorBtn").forEach(btn=>{
-
-    btn.onclick=()=>{
-
-        selectedColor=btn.dataset.color
-
-        document.querySelectorAll(".colorBtn").forEach(b=>{
-            b.style.border="1px solid #ccc"
-        })
-
-        btn.style.border="3px solid black"
-
-    }
-
-})
-
-drawTool.onclick=()=>{
-tool="draw"
-}
-
-arrowTool.onclick=()=>{
-tool="arrow"
-}
-
-undoTool.onclick=()=>{
-
-if(history.length===0)return
-
-let img=new Image()
-
-img.onload=()=>{
-ctx.clearRect(0,0,canvas.width,canvas.height)
-ctx.drawImage(img,0,0)
-}
-
-let previous=history.pop()
-
-if(!previous)return
-
-img.src=previous
-
-}
-
-clearTool.onclick=()=>{
-
-if(!currentImage)return
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
-ctx.drawImage(currentImage,0,0)
-
-history=[]
-
-}
-
-function getPos(e){
-
-const rect=canvas.getBoundingClientRect()
-
-if(e.touches){
-
-return{
-x:(e.touches[0].clientX-rect.left)*(canvas.width/rect.width),
-y:(e.touches[0].clientY-rect.top)*(canvas.height/rect.height)
-}
-
-}
-
-return{
-x:(e.clientX-rect.left)*(canvas.width/rect.width),
-y:(e.clientY-rect.top)*(canvas.height/rect.height)
-}
-
-}
-function startDraw(e){
-
-history.push(canvas.toDataURL())
-
-drawing=true
-
-const pos=getPos(e)
-
-startX=pos.x
-startY=pos.y
-
-if(tool==="draw"){
-
-ctx.beginPath()
-ctx.moveTo(startX,startY)
-
-ctx.strokeStyle=selectedColor
-ctx.lineWidth=parseInt(penSize.value)
-
-}
-e.preventDefault()
-}
-function draw(e){
-
-if(!drawing)return
-
-const pos=getPos(e)
-lastX=pos.x
-lastY=pos.y
-
-if(tool==="draw"){
-
-ctx.lineTo(pos.x,pos.y)
-ctx.stroke()
-
-}
-e.preventDefault()
-}
-function stopDraw(e){
-
-
-if(!drawing)return
-
-drawing=false
-
-if(tool!=="arrow")return
-
-const endX=lastX
-const endY=lastY
-
-ctx.strokeStyle=selectedColor
-ctx.fillStyle=selectedColor
-ctx.lineWidth=parseInt(penSize.value)
-
-ctx.beginPath()
-ctx.moveTo(startX,startY)
-ctx.lineTo(endX,endY)
-ctx.stroke()
-
-const angle=Math.atan2(endY-startY,endX-startX)
-
-const head=parseInt(penSize.value)*3
-
-ctx.beginPath()
-
-ctx.moveTo(endX,endY)
-
-ctx.lineTo(
-endX-head*Math.cos(angle-Math.PI/6),
-endY-head*Math.sin(angle-Math.PI/6)
-)
-
-ctx.lineTo(
-endX-head*Math.cos(angle+Math.PI/6),
-endY-head*Math.sin(angle+Math.PI/6)
-)
-
-ctx.closePath()
-ctx.fill()
-e.preventDefault()
-}
-canvas.addEventListener("mousedown",startDraw)
-canvas.addEventListener("mousemove",draw)
-canvas.addEventListener("mouseup",stopDraw)
-canvas.addEventListener("touchstart",startDraw)
-canvas.addEventListener("touchmove",draw)
-canvas.addEventListener("touchend",stopDraw)
-
 function openCamera(){cameraInput.click()}
 function openGallery(){galleryInput.click()}
 
@@ -437,35 +196,13 @@ cameraInput.onchange=e=>handleImage(e.target.files[0])
 galleryInput.onchange=e=>handleImage(e.target.files[0])
 
 function handleImage(file){
-
 if(!file)return
-
 let reader=new FileReader()
-
 reader.onload=e=>{
-
-currentImage=new Image()
-
-currentImage.onload=function(){
-
-canvas.width=currentImage.width
-canvas.height=currentImage.height
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
-ctx.drawImage(currentImage,0,0)
-
-history=[]
-
+previewImg.src=e.target.result
 preview.style.display="block"
-
 }
-
-currentImage.src=e.target.result
-
-}
-
 reader.readAsDataURL(file)
-
 }
 
 activityEl.onchange=()=>activityOther.style.display=activityEl.value==="other"?"block":"none"
@@ -488,57 +225,42 @@ reader.readAsDataURL(file)
 
 function addSnag(){
 
-    let activity = activityEl.value==="other"
-        ? activityOther.value
-        : activityEl.value
+let activity=activityEl.value==="other"?activityOther.value:activityEl.value
+let location=locationEl.value==="other"?locationOther.value:locationEl.value
+let obs=obsEl.value
+let file=cameraInput.files[0]||galleryInput.files[0]
 
-    let location = locationEl.value==="other"
-        ? locationOther.value
-        : locationEl.value
+if(!activity||!location){alert("Select Activity and Location");return}
 
-    let obs = obsEl.value
+if(editIndex!==null){
 
-    let file = cameraInput.files[0] || galleryInput.files[0]
-
-    if(!activity || !location){
-        alert("Select Activity and Location")
-        return
-    }
-
-    if(!file && editIndex===null){
-        alert("Capture Photo")
-        return
-    }
-
-    let annotatedPhoto = canvas.toDataURL("image/jpeg",0.7)
-
-    if(editIndex!==null){
-
-        snags[editIndex]={
-            activity,
-            location,
-            obs,
-            photo:annotatedPhoto
-        }
-
-        finishEdit()
-        saveData()
-
-    }else{
-
-        snags.push({
-            activity,
-            location,
-            obs,
-            photo:annotatedPhoto
-        })
-
-        renderTable()
-        clearForm()
-        saveData()
-    }
+if(file){
+compressImage(file,function(photo){
+snags[editIndex]={activity,location,obs,photo}
+finishEdit()
+saveData()
+})
+}else{
+snags[editIndex].activity=activity
+snags[editIndex].location=location
+snags[editIndex].obs=obs
+finishEdit()
+saveData()
 }
 
+}else{
+
+if(!file){alert("Capture Photo");return}
+
+compressImage(file,function(photo){
+snags.push({activity,location,obs,photo})
+renderTable()
+clearForm()
+saveData()
+})
+
+}
+}
 
 function renderTable(){
 let tbody=document.querySelector("#snagTable tbody")
@@ -576,21 +298,8 @@ let s=snags[i]
 activityEl.value=s.activity
 locationEl.value=s.location
 obsEl.value=s.obs
-let img=new Image()
-
-img.onload=function(){
-
-canvas.width=img.width
-canvas.height=img.height
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
-ctx.drawImage(img,0,0)
-
+previewImg.src=s.photo
 preview.style.display="block"
-
-}
-
-img.src=s.photo
 editIndex=i
 addBtn.innerText="Update Snag"
 addBtn.className="update"
@@ -627,9 +336,6 @@ obsEl.value=""
 cameraInput.value=""
 galleryInput.value=""
 preview.style.display="none"
-ctx.clearRect(0,0,canvas.width,canvas.height)
-history=[]
-currentImage=null
 }
 
 /* ORIGINAL PDF FULLY INTACT */
