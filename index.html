@@ -1,436 +1,935 @@
 <!DOCTYPE html>
 <html>
+
 <head>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Snag Report Generator</title>
+    <title>Snag Report Generator</title>
 
-<link rel="icon" href="logo.png">
-<link rel="apple-touch-icon" href="logo.png">
-<link rel="manifest" href="manifest.json">
+    <link rel="icon" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="manifest" href="manifest.json">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<style>
-*{box-sizing:border-box}
-body{font-family:system-ui;background:#f4f6f9;margin:0;padding:14px;color:#333;}
-.header{background:white;padding:16px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.08);margin-bottom:14px;text-align:center;font-weight:600;}
-.card{background:white;padding:16px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.08);margin-bottom:14px;}
-.card h3{margin:0 0 10px;font-size:16px;border-bottom:1px solid #eee;padding-bottom:6px;}
-input,select,textarea{width:100%;padding:10px;margin-top:8px;margin-bottom:10px;border:1px solid #ccc;border-radius:8px;background:#fafafa;}
-button{width:100%;padding:12px;border:none;border-radius:8px;cursor:pointer;font-weight:500;}
-.primary{background:#1976d2;color:white;}
-.update{background:#ef6c00;color:white;}
-.deleteBtn{background:#c62828;color:white;}
-.download{background:#2e7d32;color:white;}
-#preview{display:none;margin-top:8px;}
-#preview img{width:120px;border-radius:8px;}
-.tableWrap{overflow:auto;}
-table{width:100%;border-collapse:collapse;}
-th,td{border:1px solid #ddd;padding:8px;text-align:center;}
-th{background:#f1f3f5;position:sticky;top:0;}
-img{width:90px;border-radius:6px;cursor:pointer;}
-.actionBtn{padding:6px 8px;margin:2px;border-radius:6px;font-size:12px;}
-.editBtn{background:#1976d2;color:white;}
-.delBtn{background:#c62828;color:white;}
-</style>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: system-ui;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 14px;
+            color: #333;
+        }
+
+        .header {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            margin-bottom: 14px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .card {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            margin-bottom: 14px;
+        }
+
+        .card h3 {
+            margin: 0 0 10px;
+            font-size: 16px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 6px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .primary {
+            background: #1976d2;
+            color: white;
+        }
+
+        .update {
+            background: #ef6c00;
+            color: white;
+        }
+
+        .deleteBtn {
+            background: #c62828;
+            color: white;
+        }
+
+        .download {
+            background: #2e7d32;
+            color: white;
+        }
+
+        #preview {
+            display: none;
+            margin-top: 8px;
+        }
+
+        #preview img {
+            width: 120px;
+            border-radius: 8px;
+        }
+
+        .tableWrap {
+            overflow: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: #f1f3f5;
+            position: sticky;
+            top: 0;
+        }
+
+        img {
+            width: 90px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .actionBtn {
+            padding: 6px 8px;
+            margin: 2px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .editBtn {
+            background: #1976d2;
+            color: white;
+        }
+
+        .delBtn {
+            background: #c62828;
+            color: white;
+        }
+
+        #photoCanvas {
+            width: 100%;
+            max-height: 450px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            touch-action: none;
+            background: white;
+        }
+    </style>
 
 </head>
 
 <body>
 
-<div class="header">Snag Report Generator</div>
-
-<div class="card">
-<h3>Project Details</h3>
-<input id="project" placeholder="Project Name">
-<input id="tower" placeholder="Tower No">
-<input id="flat" placeholder="Flat No">
-<div style="display:flex;gap:10px;">
-<input id="preparedBy" placeholder="Prepared By">
-<input type="date" id="inspectionDate">
-</div>
-</div>
-
-<div class="card">
-<h3>Add Snag</h3>
-
-<select id="activity">
-<option value="" disabled selected>Activity</option>
-<option>Doors</option><option>Windows</option><option>Gypsum</option>
-<option>Painting</option><option>Tiling</option><option>RCC</option>
-<option>False Ceiling</option><option>Electrical</option>
-<option>Plumbing</option><option>Fire Fighting</option>
-<option value="other">Other</option>
-</select>
-
-<input id="activityOther" placeholder="Enter Activity" style="display:none">
-
-<select id="location">
-<option value="" disabled selected>Location</option>
-<option>Living Room</option><option>Kitchen</option>
-<option>Dry Balcony</option><option>Common Bedroom</option>
-<option>Master Bedroom</option><option>Master Toilet</option>
-<option>Common Toilet</option><option>Guest Bedroom</option>
-<option>Guest Toilet</option>
-<option value="other">Other</option>
-</select>
-
-<input id="locationOther" placeholder="Enter Location" style="display:none">
-
-<textarea id="obs" placeholder="Observation"></textarea>
-
-<div style="display:flex;gap:10px;">
-<button type="button" onclick="openCamera()" class="primary">📷 Camera</button>
-<button type="button" onclick="openGallery()" class="update">🖼 Gallery</button>
-</div>
-
-<input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none">
-<input type="file" accept="image/*" id="galleryInput" style="display:none">
-
-<div id="preview"><img id="previewImg"></div>
-
-<button id="addBtn" class="primary" onclick="addSnag()" style="margin-top:12px;">Add Snag</button>
-<button id="cancelBtn" class="update" onclick="cancelEdit()" style="display:none;margin-top:6px;">Cancel Edit</button>
-
-</div>
-
-<div class="card tableWrap">
-<h3>Snag List</h3>
-<table id="snagTable">
-<thead>
-<tr>
-<th>SR</th><th>ACTIVITY</th><th>LOCATION</th>
-<th>OBSERVATION</th><th>PHOTO</th><th>ACTION</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-
-<div class="card">
-<h3>Common Points</h3>
-<textarea id="commonPoints" style="min-height:100px;"></textarea>
-</div>
-
-<div class="card" style="display:flex;gap:10px;">
-<button class="download" onclick="generatePDF()">Download PDF</button>
-<button class="deleteBtn" onclick="resetApp()">Reset Report</button>
-</div>
-
-<script>
-
-const { jsPDF } = window.jspdf
-let snags=[]
-let editIndex=null
-
-/* ✅ AUTO SAVE */
-function saveData(){
-localStorage.setItem("snagData",JSON.stringify({
-snags,
-project:project.value,
-tower:tower.value,
-flat:flat.value,
-preparedBy:preparedBy.value,
-inspectionDate:inspectionDate.value,
-commonPoints:commonPoints.value
-}))
-}
-
-function loadData(){
-let data=localStorage.getItem("snagData")
-if(!data)return
-let d=JSON.parse(data)
-snags=d.snags||[]
-project.value=d.project||""
-tower.value=d.tower||""
-flat.value=d.flat||""
-preparedBy.value=d.preparedBy||""
-inspectionDate.value=d.inspectionDate||""
-commonPoints.value=d.commonPoints||""
-renderTable()
-}
-
-window.onload=function(){
-let today=new Date()
-let yyyy=today.getFullYear()
-let mm=String(today.getMonth()+1).padStart(2,'0')
-let dd=String(today.getDate()).padStart(2,'0')
-inspectionDate.value=`${yyyy}-${mm}-${dd}`
-loadData()
-}
-
-/* ✅ BACK CONFIRM */
-window.onbeforeunload=function(e){
-if(snags.length>0){
-e.preventDefault()
-e.returnValue=''
-}
-}
-
-if("serviceWorker"in navigator){
-navigator.serviceWorker.register("sw.js")
-}
-
-const activityEl=document.getElementById("activity")
-const locationEl=document.getElementById("location")
-const obsEl=document.getElementById("obs")
-const preview=document.getElementById("preview")
-const previewImg=document.getElementById("previewImg")
-
-const cameraInput=document.getElementById("cameraInput")
-const galleryInput=document.getElementById("galleryInput")
-
-const activityOther=document.getElementById("activityOther")
-const locationOther=document.getElementById("locationOther")
-
-const addBtn=document.getElementById("addBtn")
-const cancelBtn=document.getElementById("cancelBtn")
-
-function openCamera(){cameraInput.click()}
-function openGallery(){galleryInput.click()}
-
-cameraInput.onchange=e=>handleImage(e.target.files[0])
-galleryInput.onchange=e=>handleImage(e.target.files[0])
-
-function handleImage(file){
-if(!file)return
-let reader=new FileReader()
-reader.onload=e=>{
-previewImg.src=e.target.result
-preview.style.display="block"
-}
-reader.readAsDataURL(file)
-}
-
-activityEl.onchange=()=>activityOther.style.display=activityEl.value==="other"?"block":"none"
-locationEl.onchange=()=>locationOther.style.display=locationEl.value==="other"?"block":"none"
-
-function compressImage(file,callback){
-let img=new Image()
-let reader=new FileReader()
-reader.onload=e=>img.src=e.target.result
-img.onload=function(){
-let canvas=document.createElement("canvas")
-let scale=Math.min(1,600/img.width)
-canvas.width=img.width*scale
-canvas.height=img.height*scale
-canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height)
-callback(canvas.toDataURL("image/jpeg",0.5))
-}
-reader.readAsDataURL(file)
-}
-
-function addSnag(){
-
-let activity=activityEl.value==="other"?activityOther.value:activityEl.value
-let location=locationEl.value==="other"?locationOther.value:locationEl.value
-let obs=obsEl.value
-let file=cameraInput.files[0]||galleryInput.files[0]
-
-if(!activity||!location){alert("Select Activity and Location");return}
-
-if(editIndex!==null){
-
-if(file){
-compressImage(file,function(photo){
-snags[editIndex]={activity,location,obs,photo}
-finishEdit()
-saveData()
-})
-}else{
-snags[editIndex].activity=activity
-snags[editIndex].location=location
-snags[editIndex].obs=obs
-finishEdit()
-saveData()
-}
-
-}else{
-
-if(!file){alert("Capture Photo");return}
-
-compressImage(file,function(photo){
-snags.push({activity,location,obs,photo})
-renderTable()
-clearForm()
-saveData()
-})
-
-}
-}
-
-function renderTable(){
-let tbody=document.querySelector("#snagTable tbody")
-tbody.innerHTML=""
-snags.forEach((s,i)=>{
-let row=tbody.insertRow()
-row.insertCell(0).innerText=i+1
-row.insertCell(1).innerText=s.activity
-row.insertCell(2).innerText=s.location
-row.insertCell(3).innerText=s.obs
-
-let img=document.createElement("img")
-img.src=s.photo
-row.insertCell(4).appendChild(img)
-
-let action=row.insertCell(5)
-
-let edit=document.createElement("button")
-edit.innerText="Edit"
-edit.className="actionBtn editBtn"
-edit.onclick=()=>editSnag(i)
-
-let del=document.createElement("button")
-del.innerText="Delete"
-del.className="actionBtn delBtn"
-del.onclick=()=>deleteSnag(i)
-
-action.appendChild(edit)
-action.appendChild(del)
-})
-}
-
-function editSnag(i){
-let s=snags[i]
-activityEl.value=s.activity
-locationEl.value=s.location
-obsEl.value=s.obs
-previewImg.src=s.photo
-preview.style.display="block"
-editIndex=i
-addBtn.innerText="Update Snag"
-addBtn.className="update"
-cancelBtn.style.display="block"
-window.scrollTo({top:0,behavior:"smooth"})
-}
-
-function deleteSnag(i){
-if(!confirm("Delete this snag?"))return
-snags.splice(i,1)
-renderTable()
-saveData()
-}
-
-function finishEdit(){
-editIndex=null
-addBtn.innerText="Add Snag"
-addBtn.className="primary"
-cancelBtn.style.display="none"
-renderTable()
-clearForm()
-}
-
-function cancelEdit(){
-editIndex=null
-addBtn.innerText="Add Snag"
-addBtn.className="primary"
-cancelBtn.style.display="none"
-clearForm()
-}
-
-function clearForm(){
-obsEl.value=""
-cameraInput.value=""
-galleryInput.value=""
-preview.style.display="none"
-}
-
-/* ORIGINAL PDF FULLY INTACT */
-function generatePDF(){
-
-if(snags.length==0){alert("No snags added");return}
-
-let project=document.getElementById("project").value
-let tower=document.getElementById("tower").value
-let flat=document.getElementById("flat").value
-let preparedBy=document.getElementById("preparedBy").value
-let inspectionDate=document.getElementById("inspectionDate").value
-
-if (inspectionDate) {
-let [yyyy, mm, dd] = inspectionDate.split("-")
-inspectionDate = dd + "-" + mm + "-" + yyyy
-}
-
-let doc=new jsPDF("p","mm","a4")
-
-doc.setFont("helvetica")
-doc.setFontSize(12)
-
-doc.rect(10,10,190,12)
-doc.text(project+" TOWER "+tower+" FLAT NO - "+flat,105,18,{align:"center"})
-
-doc.setFontSize(10)
-doc.text("Prepared By : "+preparedBy,10,28)
-doc.text("Inspection Date : "+inspectionDate,200,28,{align:"right"})
-
-let y=35
-doc.setFontSize(9)
-
-function centerText(text,x,y,w,h){
-let lines=doc.splitTextToSize(text,w-4)
-let lineHeight=4
-let totalHeight=lines.length*lineHeight
-let startY=y+(h-totalHeight)/2+3
-lines.forEach((line,i)=>{
-doc.text(line,x+w/2,startY+(i*lineHeight),{align:"center"})
-})
-}
-
-doc.rect(10,y,10,10); centerText("SR",10,y,10,10)
-doc.rect(20,y,35,10); centerText("ACTIVITY",20,y,35,10)
-doc.rect(55,y,35,10); centerText("LOCATION",55,y,35,10)
-doc.rect(90,y,60,10); centerText("OBSERVATION",90,y,60,10)
-doc.rect(150,y,50,10); centerText("PHOTO",150,y,50,10)
-
-y+=10
-
-snags.forEach((s,i)=>{
-if(y>260){doc.addPage();y=20}
-doc.rect(10,y,10,30); centerText(String(i+1),10,y,10,30)
-doc.rect(20,y,35,30); centerText(s.activity,20,y,35,30)
-doc.rect(55,y,35,30); centerText(s.location,55,y,35,30)
-doc.rect(90,y,60,30); centerText(s.obs,90,y,60,30)
-doc.rect(150,y,50,30)
-doc.addImage(s.photo,"JPEG",152,y+2,46,26)
-y+=30
-})
-
-let common=document.getElementById("commonPoints").value.trim()
-
-if(common){
-if(y>240){doc.addPage();y=20}
-y+=10
-doc.setFontSize(11)
-doc.text("Common Points :",10,y)
-y+=8
-
-doc.setFontSize(9)
-let lines = doc.splitTextToSize(common,185)
-
-lines.forEach(line=>{
-if(y>280){
-doc.addPage()
-y=20
-}
-doc.text(line,12,y)
-y+=6
-})
-}
-
-let filename="Tower "+tower+" Flat no. "+flat+".pdf"
-doc.save(filename)
-}
-
-function resetApp(){
-if(!confirm("Are you sure you want to reset the report? All data will be lost."))return
-localStorage.removeItem("snagData")
-location.reload()
-}
-
-</script>
+    <div class="header">Snag Report Generator</div>
+
+    <div class="card">
+        <h3>Project Details</h3>
+        <input id="project" placeholder="Project Name">
+        <input id="tower" placeholder="Tower No">
+        <input id="flat" placeholder="Flat No">
+        <div style="display:flex;gap:10px;">
+            <input id="preparedBy" placeholder="Prepared By">
+            <input type="date" id="inspectionDate">
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Add Snag</h3>
+
+        <select id="activity">
+            <option value="" disabled selected>Activity</option>
+            <option>Doors</option>
+            <option>Windows</option>
+            <option>Gypsum</option>
+            <option>Painting</option>
+            <option>Tiling</option>
+            <option>RCC</option>
+            <option>False Ceiling</option>
+            <option>Electrical</option>
+            <option>Plumbing</option>
+            <option>Fire Fighting</option>
+            <option value="other">Other</option>
+        </select>
+
+        <input id="activityOther" placeholder="Enter Activity" style="display:none">
+
+        <select id="location">
+            <option value="" disabled selected>Location</option>
+            <option>Living Room</option>
+            <option>Kitchen</option>
+            <option>Dry Balcony</option>
+            <option>Common Bedroom</option>
+            <option>Master Bedroom</option>
+            <option>Master Toilet</option>
+            <option>Common Toilet</option>
+            <option>Guest Bedroom</option>
+            <option>Guest Toilet</option>
+            <option value="other">Other</option>
+        </select>
+
+        <input id="locationOther" placeholder="Enter Location" style="display:none">
+
+        <textarea id="obs" placeholder="Observation"></textarea>
+
+        <div style="display:flex;gap:10px;">
+            <button type="button" onclick="openCamera()" class="primary">📷 Camera</button>
+            <button type="button" onclick="openGallery()" class="update">🖼 Gallery</button>
+        </div>
+
+        <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none">
+        <input type="file" accept="image/*" id="galleryInput" style="display:none">
+
+        <div id="preview" style="display:none">
+
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <button type="button" id="drawTool">Draw</button>
+                <button type="button" id="arrowTool">Arrow</button>
+                <button type="button" id="undoTool">Undo</button>
+                <button type="button" id="clearTool">Clear</button>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+
+                <button type="button" class="colorBtn" data-color="red">🔴</button>
+                <button type="button" class="colorBtn" data-color="yellow">🟡</button>
+                <button type="button" class="colorBtn" data-color="lime">🟢</button>
+                <button type="button" class="colorBtn" data-color="blue">🔵</button>
+
+                <select id="penSize">
+                    <option value="6">Thin</option>
+                    <option value="12">Medium</option>
+                    <option value="20" selected>Thick</option>
+                    <option value="30">Extra Thick</option>
+                    <option value="40">Very Thick</option>
+                </select>
+            </div>
+
+            <canvas id="photoCanvas"></canvas>
+
+        </div>
+        <button id="addBtn" class="primary" onclick="addSnag()" style="margin-top:12px;">Add Snag</button>
+        <button id="cancelBtn" class="update" onclick="cancelEdit()" style="display:none;margin-top:6px;">Cancel
+            Edit</button>
+
+    </div>
+
+    <div class="card tableWrap">
+        <h3>Snag List</h3>
+        <table id="snagTable">
+            <thead>
+                <tr>
+                    <th>SR</th>
+                    <th>ACTIVITY</th>
+                    <th>LOCATION</th>
+                    <th>OBSERVATION</th>
+                    <th>PHOTO</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>Common Points</h3>
+        <textarea id="commonPoints" style="min-height:100px;"></textarea>
+    </div>
+
+    <div class="card" style="display:flex;gap:10px;">
+        <button class="download" onclick="generatePDF()">Download PDF</button>
+        <button class="deleteBtn" onclick="resetApp()">Reset Report</button>
+    </div>
+
+    <script>
+
+        const { jsPDF } = window.jspdf
+        let snags = []
+        let editIndex = null
+
+        let currentImage = null
+
+        let drawing = false
+        let tool = "draw"
+        let selectedColor = "red"
+
+        let startX = 0
+        let startY = 0
+        let lastX = 0
+        let lastY = 0
+
+        let history = []
+        let db
+
+        const dbReady = new Promise((resolve, reject) => {
+            const request = indexedDB.open("SnagPhotos", 1)
+            request.onupgradeneeded = e => {
+                const d = e.target.result
+                if (!d.objectStoreNames.contains("photos")) {
+                    d.createObjectStore("photos")
+                }
+            }
+            request.onsuccess = e => {
+                db = e.target.result
+                resolve(db)
+            }
+            request.onerror = e => reject(e.target.error)
+        })
+
+        async function savePhoto(id, data) {
+            const d = await dbReady
+            const tx = d.transaction(["photos"], "readwrite")
+            tx.objectStore("photos").put(data, id)
+        }
+
+        async function getPhoto(id) {
+            const d = await dbReady
+            return new Promise(resolve => {
+                const tx = d.transaction(["photos"], "readonly")
+                const req = tx.objectStore("photos").get(id)
+                req.onsuccess = () => resolve(req.result)
+            })
+        }
+
+        async function deletePhoto(id) {
+            const d = await dbReady
+            const tx = d.transaction(["photos"], "readwrite")
+            tx.objectStore("photos").delete(id)
+        }
+
+        /* ✅ AUTO SAVE */
+        function saveData() {
+            localStorage.setItem("snagData", JSON.stringify({
+                snags,
+                project: project.value,
+                tower: tower.value,
+                flat: flat.value,
+                preparedBy: preparedBy.value,
+                inspectionDate: inspectionDate.value,
+                commonPoints: commonPoints.value
+            }))
+        }
+
+        function loadData() {
+            let data = localStorage.getItem("snagData")
+            if (!data) return
+            let d = JSON.parse(data)
+            snags = d.snags || []
+            project.value = d.project || ""
+            tower.value = d.tower || ""
+            flat.value = d.flat || ""
+            preparedBy.value = d.preparedBy || ""
+            inspectionDate.value = d.inspectionDate || ""
+            commonPoints.value = d.commonPoints || ""
+            renderTable()
+        }
+        window.addEventListener("load", () => {
+
+            const firstColor = document.querySelector('.colorBtn[data-color="red"]')
+
+            if (firstColor) {
+                firstColor.style.border = "3px solid black"
+            }
+
+        })
+        window.onload = function () {
+            let today = new Date()
+            let yyyy = today.getFullYear()
+            let mm = String(today.getMonth() + 1).padStart(2, '0')
+            let dd = String(today.getDate()).padStart(2, '0')
+            inspectionDate.value = `${yyyy}-${mm}-${dd}`
+            loadData()
+        }
+
+        /* ✅ BACK CONFIRM */
+        window.onbeforeunload = function (e) {
+            if (snags.length > 0) {
+                e.preventDefault()
+                e.returnValue = ''
+            }
+        }
+
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("sw.js")
+        }
+
+        const activityEl = document.getElementById("activity")
+        const locationEl = document.getElementById("location")
+        const obsEl = document.getElementById("obs")
+        const preview = document.getElementById("preview")
+
+        const canvas = document.getElementById("photoCanvas")
+        const ctx = canvas.getContext("2d")
+
+        const cameraInput = document.getElementById("cameraInput")
+        const galleryInput = document.getElementById("galleryInput")
+
+        const activityOther = document.getElementById("activityOther")
+        const locationOther = document.getElementById("locationOther")
+
+        const addBtn = document.getElementById("addBtn")
+        const cancelBtn = document.getElementById("cancelBtn")
+
+        const drawTool = document.getElementById("drawTool")
+        const arrowTool = document.getElementById("arrowTool")
+        const undoTool = document.getElementById("undoTool")
+        const clearTool = document.getElementById("clearTool")
+        const penSize = document.getElementById("penSize")
+
+        document.querySelectorAll(".colorBtn").forEach(btn => {
+
+            btn.onclick = () => {
+
+                selectedColor = btn.dataset.color
+
+                document.querySelectorAll(".colorBtn").forEach(b => {
+                    b.style.border = "1px solid #ccc"
+                })
+
+                btn.style.border = "3px solid black"
+
+            }
+
+        })
+
+        drawTool.onclick = () => {
+            tool = "draw"
+        }
+
+        arrowTool.onclick = () => {
+            tool = "arrow"
+        }
+
+        undoTool.onclick = () => {
+
+            if (history.length === 0) return
+
+            let img = new Image()
+
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height)
+                ctx.drawImage(img, 0, 0)
+            }
+
+            let previous = history.pop()
+
+            if (!previous) return
+
+            img.src = previous
+
+        }
+
+        clearTool.onclick = () => {
+
+            if (!currentImage) return
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            ctx.drawImage(currentImage, 0, 0)
+
+            history = []
+
+        }
+
+        function getPos(e) {
+
+            const rect = canvas.getBoundingClientRect()
+
+            if (e.touches) {
+
+                return {
+                    x: (e.touches[0].clientX - rect.left) * (canvas.width / rect.width),
+                    y: (e.touches[0].clientY - rect.top) * (canvas.height / rect.height)
+                }
+
+            }
+
+            return {
+                x: (e.clientX - rect.left) * (canvas.width / rect.width),
+                y: (e.clientY - rect.top) * (canvas.height / rect.height)
+            }
+
+        }
+        function startDraw(e) {
+
+            history.push(canvas.toDataURL())
+
+            drawing = true
+
+            const pos = getPos(e)
+
+            startX = pos.x
+            startY = pos.y
+
+            if (tool === "draw") {
+
+                ctx.beginPath()
+                ctx.moveTo(startX, startY)
+
+                ctx.strokeStyle = selectedColor
+                ctx.lineWidth = parseInt(penSize.value)
+
+            }
+            e.preventDefault()
+        }
+        function draw(e) {
+
+            if (!drawing) return
+
+            const pos = getPos(e)
+            lastX = pos.x
+            lastY = pos.y
+
+            if (tool === "draw") {
+
+                ctx.lineTo(pos.x, pos.y)
+                ctx.stroke()
+
+            }
+            e.preventDefault()
+        }
+        function stopDraw(e) {
+
+
+            if (!drawing) return
+
+            drawing = false
+
+            if (tool !== "arrow") return
+
+            const endX = lastX
+            const endY = lastY
+
+            ctx.strokeStyle = selectedColor
+            ctx.fillStyle = selectedColor
+            ctx.lineWidth = parseInt(penSize.value)
+
+            ctx.beginPath()
+            ctx.moveTo(startX, startY)
+            ctx.lineTo(endX, endY)
+            ctx.stroke()
+
+            const angle = Math.atan2(endY - startY, endX - startX)
+
+            const head = parseInt(penSize.value) * 3
+
+            ctx.beginPath()
+
+            ctx.moveTo(endX, endY)
+
+            ctx.lineTo(
+                endX - head * Math.cos(angle - Math.PI / 6),
+                endY - head * Math.sin(angle - Math.PI / 6)
+            )
+
+            ctx.lineTo(
+                endX - head * Math.cos(angle + Math.PI / 6),
+                endY - head * Math.sin(angle + Math.PI / 6)
+            )
+
+            ctx.closePath()
+            ctx.fill()
+            e.preventDefault()
+        }
+        canvas.addEventListener("mousedown", startDraw)
+        canvas.addEventListener("mousemove", draw)
+        canvas.addEventListener("mouseup", stopDraw)
+        canvas.addEventListener("touchstart", startDraw)
+        canvas.addEventListener("touchmove", draw)
+        canvas.addEventListener("touchend", stopDraw)
+
+        function openCamera() { cameraInput.click() }
+        function openGallery() { galleryInput.click() }
+
+        cameraInput.onchange = e => handleImage(e.target.files[0])
+        galleryInput.onchange = e => handleImage(e.target.files[0])
+
+        function handleImage(file) {
+
+            if (!file) return
+
+            let reader = new FileReader()
+
+            reader.onload = e => {
+
+                currentImage = new Image()
+
+                currentImage.onload = function () {
+
+                    canvas.width = currentImage.width
+                    canvas.height = currentImage.height
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height)
+                    ctx.drawImage(currentImage, 0, 0)
+
+                    history = []
+
+                    preview.style.display = "block"
+
+                }
+
+                currentImage.src = e.target.result
+
+            }
+
+            reader.readAsDataURL(file)
+
+        }
+
+        activityEl.onchange = () => activityOther.style.display = activityEl.value === "other" ? "block" : "none"
+        locationEl.onchange = () => locationOther.style.display = locationEl.value === "other" ? "block" : "none"
+
+
+        function addSnag() {
+
+            let activity = activityEl.value === "other"
+                ? activityOther.value
+                : activityEl.value
+
+            let location = locationEl.value === "other"
+                ? locationOther.value
+                : locationEl.value
+
+            let obs = obsEl.value
+
+            let file = cameraInput.files[0] || galleryInput.files[0]
+
+            if (!activity || !location) {
+                alert("Select Activity and Location")
+                return
+            }
+
+            if (!file && editIndex === null) {
+                alert("Capture Photo")
+                return
+            }
+
+            let tempCanvas = document.createElement("canvas")
+            let tempCtx = tempCanvas.getContext("2d")
+
+            const maxWidth = 800;
+
+            const scale = Math.min(
+                1,
+                maxWidth / canvas.width
+            );
+
+            tempCanvas.width = canvas.width * scale
+            tempCanvas.height = canvas.height * scale
+
+            tempCtx.drawImage(
+                canvas,
+                0,
+                0,
+                tempCanvas.width,
+                tempCanvas.height
+            )
+
+            const annotatedPhoto = tempCanvas.toDataURL(
+                "image/jpeg",
+                0.6
+            )
+
+            if (editIndex !== null) {
+
+                savePhoto(
+                    snags[editIndex].photoId,
+                    annotatedPhoto
+
+                )
+
+                snags[editIndex] = {
+                    activity,
+                    location,
+                    obs,
+                    photoId:
+                        snags[editIndex].photoId
+                }
+
+                finishEdit()
+                saveData()
+
+            } else {
+
+                const photoId =
+                    "img_" + Date.now()
+
+                savePhoto(
+                    photoId,
+                    annotatedPhoto
+
+                )
+
+                snags.push({
+                    activity,
+                    location,
+                    obs,
+                    photoId
+                })
+
+                renderTable()
+                clearForm()
+                saveData()
+            }
+        }
+
+
+        function renderTable() {
+            let tbody = document.querySelector("#snagTable tbody")
+            tbody.innerHTML = ""
+            snags.forEach((s, i) => {
+                let row = tbody.insertRow()
+                row.insertCell(0).innerText = i + 1
+                row.insertCell(1).innerText = s.activity
+                row.insertCell(2).innerText = s.location
+                row.insertCell(3).innerText = s.obs
+
+                let img = document.createElement("img")
+                getPhoto(s.photoId)
+                    .then(photo => {
+
+                        img.src = photo
+
+                    })
+                row.insertCell(4).appendChild(img)
+
+                let action = row.insertCell(5)
+
+                let edit = document.createElement("button")
+                edit.innerText = "Edit"
+                edit.className = "actionBtn editBtn"
+                edit.onclick = () => editSnag(i)
+
+                let del = document.createElement("button")
+                del.innerText = "Delete"
+                del.className = "actionBtn delBtn"
+                del.onclick = () => deleteSnag(i)
+
+                action.appendChild(edit)
+                action.appendChild(del)
+            })
+        }
+
+        function editSnag(i) {
+            let s = snags[i]
+            activityEl.value = s.activity
+            locationEl.value = s.location
+            obsEl.value = s.obs
+            let img = new Image()
+
+            img.onload = function () {
+
+                canvas.width = img.width
+                canvas.height = img.height
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height)
+                ctx.drawImage(img, 0, 0)
+
+                preview.style.display = "block"
+
+            }
+
+            getPhoto(s.photoId)
+                .then(photo => {
+
+                    img.src = photo
+
+                })
+            editIndex = i
+            addBtn.innerText = "Update Snag"
+            addBtn.className = "update"
+            cancelBtn.style.display = "block"
+            window.scrollTo({ top: 0, behavior: "smooth" })
+        }
+
+        function deleteSnag(i) {
+            if (!confirm("Delete this snag?")) return
+            deletePhoto(
+                snags[i].photoId
+            )
+            snags.splice(i, 1)
+            renderTable()
+            saveData()
+        }
+
+        function finishEdit() {
+            editIndex = null
+            addBtn.innerText = "Add Snag"
+            addBtn.className = "primary"
+            cancelBtn.style.display = "none"
+            renderTable()
+            clearForm()
+        }
+
+        function cancelEdit() {
+            editIndex = null
+            addBtn.innerText = "Add Snag"
+            addBtn.className = "primary"
+            cancelBtn.style.display = "none"
+            clearForm()
+        }
+
+        function clearForm() {
+            obsEl.value = ""
+            cameraInput.value = ""
+            galleryInput.value = ""
+            preview.style.display = "none"
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            history = []
+            currentImage = null
+        }
+
+        /* ORIGINAL PDF FULLY INTACT */
+        async function generatePDF() {
+
+            if (snags.length == 0) { alert("No snags added"); return }
+
+            let project = document.getElementById("project").value
+            let tower = document.getElementById("tower").value
+            let flat = document.getElementById("flat").value
+            let preparedBy = document.getElementById("preparedBy").value
+            let inspectionDate = document.getElementById("inspectionDate").value
+
+            if (inspectionDate) {
+                let [yyyy, mm, dd] = inspectionDate.split("-")
+                inspectionDate = dd + "-" + mm + "-" + yyyy
+            }
+
+            let doc = new jsPDF("p", "mm", "a4")
+
+            doc.setFont("helvetica")
+            doc.setFontSize(12)
+
+            doc.rect(10, 10, 190, 12)
+            doc.text(project + " TOWER " + tower + " FLAT NO - " + flat, 105, 18, { align: "center" })
+
+            doc.setFontSize(10)
+            doc.text("Prepared By : " + preparedBy, 10, 28)
+            doc.text("Inspection Date : " + inspectionDate, 200, 28, { align: "right" })
+
+            let y = 35
+            doc.setFontSize(9)
+
+            function centerText(text, x, y, w, h) {
+                let lines = doc.splitTextToSize(text, w - 4)
+                let lineHeight = 4
+                let totalHeight = lines.length * lineHeight
+                let startY = y + (h - totalHeight) / 2 + 3
+                lines.forEach((line, i) => {
+                    doc.text(line, x + w / 2, startY + (i * lineHeight), { align: "center" })
+                })
+            }
+
+            doc.rect(10, y, 10, 10); centerText("SR", 10, y, 10, 10)
+            doc.rect(20, y, 35, 10); centerText("ACTIVITY", 20, y, 35, 10)
+            doc.rect(55, y, 35, 10); centerText("LOCATION", 55, y, 35, 10)
+            doc.rect(90, y, 60, 10); centerText("OBSERVATION", 90, y, 60, 10)
+            doc.rect(150, y, 50, 10); centerText("PHOTO", 150, y, 50, 10)
+
+            y += 10
+
+            for (let i = 0; i < snags.length; i++) {
+
+                const s = snags[i]
+
+                if (y > 260) { doc.addPage(); y = 20 }
+
+                doc.rect(10, y, 10, 30); centerText(String(i + 1), 10, y, 10, 30)
+                doc.rect(20, y, 35, 30); centerText(s.activity, 20, y, 35, 30)
+                doc.rect(55, y, 35, 30); centerText(s.location, 55, y, 35, 30)
+                doc.rect(90, y, 60, 30); centerText(s.obs, 90, y, 60, 30)
+                doc.rect(150, y, 50, 30)
+
+                const photo = await getPhoto(s.photoId)
+
+                doc.addImage(
+                    photo,
+                    "JPEG",
+                    152,
+                    y + 2,
+                    46,
+                    26
+                )
+
+                y += 30
+            }
+
+            let common = document.getElementById("commonPoints").value.trim()
+
+            if (common) {
+                if (y > 240) { doc.addPage(); y = 20 }
+                y += 10
+                doc.setFontSize(11)
+                doc.text("Common Points :", 10, y)
+                y += 8
+                doc.setFontSize(9)
+                let lines = doc.splitTextToSize(common, 185)
+                lines.forEach(line => {
+                    if (y > 280) {
+                        doc.addPage()
+                        y = 20
+                    }
+                    doc.text(line, 12, y)
+                    y += 6
+                })
+            }
+
+            let filename = "Tower " + tower + " Flat no. " + flat + ".pdf"
+            doc.save(filename)
+
+        }
+
+        function resetApp() {
+            if (!confirm("Are you sure you want to reset the report? All data will be lost.")) return
+            localStorage.removeItem("snagData")
+            indexedDB.deleteDatabase(
+                "SnagPhotos"
+            )
+            location.reload()
+        }
+
+    </script>
 
 </body>
+
 </html>
