@@ -156,6 +156,28 @@
             touch-action: none;
             background: white;
         }
+        /* Annotation modal */
+        #annotationModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        #annotationModal .dialog {
+            background: white;
+            width: 100%;
+            max-width: 900px;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            overflow: auto;
+        }
+        #thumbPreview img{ width:120px; border-radius:8px }
     </style>
 
 </head>
@@ -221,33 +243,50 @@
         <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none">
         <input type="file" accept="image/*" id="galleryInput" style="display:none">
 
-        <div id="preview" style="display:none">
-
-            <div style="display:flex;gap:6px;margin-bottom:8px;">
-                <button type="button" id="drawTool">Draw</button>
-                <button type="button" id="arrowTool">Arrow</button>
-                <button type="button" id="undoTool">Undo</button>
-                <button type="button" id="clearTool">Clear</button>
+        <!-- Thumbnail preview shown in form after confirmation -->
+        <div id="thumbPreview" style="display:none;margin-top:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <img id="thumbImg" src="" alt="thumb">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <button type="button" id="reopenAnnotate" class="update">Annotate</button>
+                    <button type="button" id="removeAnnotated" class="deleteBtn">Remove</button>
+                </div>
             </div>
+        </div>
 
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <!-- Annotation modal (popup) -->
+        <div id="annotationModal">
+            <div class="dialog">
+                <div style="display:flex;gap:6px;margin-bottom:8px;">
+                    <button type="button" id="drawTool">Draw</button>
+                    <button type="button" id="arrowTool">Arrow</button>
+                    <button type="button" id="undoTool">Undo</button>
+                    <button type="button" id="clearTool">Clear</button>
+                </div>
 
-                <button type="button" class="colorBtn" data-color="red">🔴</button>
-                <button type="button" class="colorBtn" data-color="yellow">🟡</button>
-                <button type="button" class="colorBtn" data-color="lime">🟢</button>
-                <button type="button" class="colorBtn" data-color="blue">🔵</button>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
 
-                <select id="penSize">
-                    <option value="6">Thin</option>
-                    <option value="12">Medium</option>
-                    <option value="20" selected>Thick</option>
-                    <option value="30">Extra Thick</option>
-                    <option value="40">Very Thick</option>
-                </select>
+                    <button type="button" class="colorBtn" data-color="red">🔴</button>
+                    <button type="button" class="colorBtn" data-color="yellow">🟡</button>
+                    <button type="button" class="colorBtn" data-color="lime">🟢</button>
+                    <button type="button" class="colorBtn" data-color="blue">🔵</button>
+
+                    <select id="penSize">
+                        <option value="6">Thin</option>
+                        <option value="12">Medium</option>
+                        <option value="20" selected>Thick</option>
+                        <option value="30">Extra Thick</option>
+                        <option value="40">Very Thick</option>
+                    </select>
+                </div>
+
+                <canvas id="photoCanvas"></canvas>
+
+                <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+                    <button type="button" id="cancelAnnotate" class="delBtn">Cancel</button>
+                    <button type="button" id="confirmAnnotate" class="primary">Confirm Annotation</button>
+                </div>
             </div>
-
-            <canvas id="photoCanvas"></canvas>
-
         </div>
         <button id="addBtn" class="primary" onclick="addSnag()" style="margin-top:12px;">Add Snag</button>
         <button id="cancelBtn" class="update" onclick="cancelEdit()" style="display:none;margin-top:6px;">Cancel
@@ -397,7 +436,14 @@
         const activityEl = document.getElementById("activity")
         const locationEl = document.getElementById("location")
         const obsEl = document.getElementById("obs")
-        const preview = document.getElementById("preview")
+        const annotationModal = document.getElementById("annotationModal")
+        const thumbPreview = document.getElementById("thumbPreview")
+        const thumbImg = document.getElementById("thumbImg")
+        const reopenAnnotate = document.getElementById("reopenAnnotate")
+        const removeAnnotated = document.getElementById("removeAnnotated")
+
+        let annotationConfirmed = false
+        let modalBackup = null
 
         const canvas = document.getElementById("photoCanvas")
         const ctx = canvas.getContext("2d")
@@ -584,6 +630,62 @@
         cameraInput.onchange = e => handleImage(e.target.files[0])
         galleryInput.onchange = e => handleImage(e.target.files[0])
 
+        // Reopen modal from thumbnail
+        reopenAnnotate.onclick = () => {
+            if (!thumbImg.src) return
+            // backup current canvas
+            modalBackup = canvas.toDataURL()
+            annotationConfirmed = false
+            openAnnotationModal()
+        }
+
+        // Remove annotated thumbnail
+        removeAnnotated.onclick = () => {
+            annotationConfirmed = false
+            thumbImg.src = ""
+            thumbPreview.style.display = "none"
+            clearForm()
+        }
+
+        function openAnnotationModal() {
+            annotationModal.style.display = "flex"
+            // keep a backup so cancel can restore
+            try { modalBackup = canvas.toDataURL() } catch (e) { modalBackup = null }
+        }
+
+        function confirmAnnotation() {
+            // mark confirmed and store thumbnail
+            annotationConfirmed = true
+            const data = canvas.toDataURL("image/jpeg", 0.9)
+            thumbImg.src = data
+            thumbPreview.style.display = "block"
+            annotationModal.style.display = "none"
+        }
+
+        function cancelAnnotation() {
+            // if we had a backup, restore it; else clear
+            annotationModal.style.display = "none"
+            if (modalBackup) {
+                let img = new Image()
+                img.onload = () => {
+                    canvas.width = img.width
+                    canvas.height = img.height
+                    ctx.clearRect(0, 0, canvas.width, canvas.height)
+                    ctx.drawImage(img, 0, 0)
+                    annotationConfirmed = true
+                    thumbImg.src = canvas.toDataURL()
+                    thumbPreview.style.display = "block"
+                }
+                img.src = modalBackup
+            } else {
+                // closed without backup - clear
+                annotationConfirmed = false
+            }
+        }
+
+        document.getElementById('confirmAnnotate').onclick = confirmAnnotation
+        document.getElementById('cancelAnnotate').onclick = cancelAnnotation
+
         function handleImage(file) {
 
             if (!file) return
@@ -593,6 +695,7 @@
             reader.onload = e => {
 
                 currentImage = new Image()
+
 
                 currentImage.onload = function () {
 
@@ -604,7 +707,9 @@
 
                     history = []
 
-                    preview.style.display = "block"
+                    // open annotation modal for immediate marking
+                    annotationConfirmed = false
+                    openAnnotationModal()
 
                 }
 
@@ -639,8 +744,8 @@
                 return
             }
 
-            if (!file && editIndex === null) {
-                alert("Capture Photo")
+            if (editIndex === null && !annotationConfirmed) {
+                alert("Capture and confirm annotation before adding snag")
                 return
             }
 
@@ -672,11 +777,13 @@
 
             if (editIndex !== null) {
 
-                savePhoto(
-                    snags[editIndex].photoId,
-                    annotatedPhoto
-
-                )
+                // if user re-annotated (confirmed), update photo; otherwise keep existing
+                if (annotationConfirmed) {
+                    savePhoto(
+                        snags[editIndex].photoId,
+                        annotatedPhoto
+                    )
+                }
 
                 snags[editIndex] = {
                     activity,
@@ -697,7 +804,6 @@
                 savePhoto(
                     photoId,
                     annotatedPhoto
-
                 )
 
                 snags.push({
@@ -757,6 +863,7 @@
             obsEl.value = s.obs
             let img = new Image()
 
+
             img.onload = function () {
 
                 canvas.width = img.width
@@ -765,7 +872,11 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height)
                 ctx.drawImage(img, 0, 0)
 
-                preview.style.display = "block"
+                // Show thumbnail and mark as confirmed (no need to re-confirm unless user reopens)
+                const data = canvas.toDataURL("image/jpeg", 0.9)
+                thumbImg.src = data
+                thumbPreview.style.display = "block"
+                annotationConfirmed = true
 
             }
 
@@ -813,7 +924,10 @@
             obsEl.value = ""
             cameraInput.value = ""
             galleryInput.value = ""
-            preview.style.display = "none"
+            thumbPreview.style.display = "none"
+            annotationModal.style.display = "none"
+            thumbImg.src = ""
+            annotationConfirmed = false
             ctx.clearRect(0, 0, canvas.width, canvas.height)
             history = []
             currentImage = null
@@ -840,7 +954,55 @@
             doc.setFont("helvetica")
             doc.setFontSize(12)
 
+            // add logo to the left side of the title bar if available
+            let logoDataUrl = null
+            try {
+                // try fetching the image as a blob (works when served over http/https)
+                const resp = await fetch('logo.png')
+                if (resp.ok) {
+                    const blob = await resp.blob()
+                    logoDataUrl = await new Promise((res, rej) => {
+                        const reader = new FileReader()
+                        reader.onload = () => res(reader.result)
+                        reader.onerror = rej
+                        reader.readAsDataURL(blob)
+                    })
+                }
+            } catch (e) {
+                // fetch may fail when running from file:// — we'll fallback below
+            }
+
+            if (!logoDataUrl) {
+                // fallback: load via Image and draw to canvas to get a dataURL
+                try {
+                    const img = new Image()
+                    await new Promise((res) => {
+                        img.onload = res
+                        img.onerror = res
+                        img.src = 'logo.png'
+                    })
+                    if (img && img.naturalWidth) {
+                        const tmp = document.createElement('canvas')
+                        tmp.width = img.naturalWidth
+                        tmp.height = img.naturalHeight
+                        const tctx = tmp.getContext('2d')
+                        tctx.drawImage(img, 0, 0)
+                        logoDataUrl = tmp.toDataURL('image/png')
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             doc.rect(10, 10, 190, 12)
+            if (logoDataUrl) {
+                try {
+                    // small logo size in mm
+                    doc.addImage(logoDataUrl, 'PNG', 12, 11, 10, 10)
+                } catch (e) {
+                    // ignore image errors and continue
+                }
+            }
             doc.text(project + " TOWER " + tower + " FLAT NO - " + flat, 105, 18, { align: "center" })
 
             doc.setFontSize(10)
